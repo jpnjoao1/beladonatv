@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TV Beladona</string>
+
+    <!-- URL do painel/servidor no Fly.io (sem barra no final).
+         Se depois você apontar o domínio próprio beladona.tv, troque por https://beladona.tv -->
+    <string name="server_url">https://beladonatv.fly.dev</string>
+</resources>

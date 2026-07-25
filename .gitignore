@@ -1,0 +1,13 @@
+node_modules/
+data/
+*.log
+
+# Android build (nao versionar artefatos de build)
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+
+# obs: public/downloads/beladonatv.apk É versionado de proposito
+# (o servidor distribui esse arquivo em /tv.apk)

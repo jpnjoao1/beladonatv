@@ -1,0 +1,25 @@
+# Configuracao do Fly.io — nome do app (sem ponto; o Fly nao aceita ponto).
+app = "beladonatv"
+primary_region = "gru"   # Sao Paulo
+
+[build]
+
+[env]
+  DATA_DIR = "/data"
+  PORT = "3000"
+
+# Volume persistente: guarda os videos enviados + db.json.
+[mounts]
+  source = "tv_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "off"     # NAO desligar: as TVs consultam a qualquer hora
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

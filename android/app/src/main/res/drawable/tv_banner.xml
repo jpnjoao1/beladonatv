@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path
+        android:fillColor="#0F0D10"
+        android:pathData="M0,0h320v180h-320z" />
+    <!-- moldura de TV -->
+    <path
+        android:fillColor="#C8A24A"
+        android:pathData="M40,52h96a4,4 0 0 1 4,4v52a4,4 0 0 1 -4,4h-96a4,4 0 0 1 -4,-4v-52a4,4 0 0 1 4,-4z" />
+    <path
+        android:fillColor="#0F0D10"
+        android:pathData="M46,60h84v40h-84z" />
+    <path
+        android:fillColor="#C8A24A"
+        android:pathData="M78,68l20,12l-20,12z" />
+    <!-- texto -->
+    <path
+        android:fillColor="#F2ECE4"
+        android:pathData="M164,70h120v6h-120z" />
+    <path
+        android:fillColor="#9B9098"
+        android:pathData="M164,92h96v5h-96z" />
+</vector>

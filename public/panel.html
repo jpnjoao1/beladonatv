@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TV Beladona — Painel</title>
+<style>
+  :root { --bg:#0f0d10; --card:#1b171c; --card2:#221d24; --line:#2c262e; --gold:#c8a24a;
+          --text:#f2ece4; --muted:#9b9098; --green:#5cb85c; --red:#e05b5b; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  header { display:flex; align-items:center; justify-content:space-between; padding:16px 24px;
+           border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:10; }
+  header h1 { font-size:17px; margin:0; letter-spacing:.5px; }
+  header .right { display:flex; gap:10px; align-items:center; }
+  a.link, button.ghost { background:transparent; border:1px solid var(--line); color:var(--muted);
+           padding:8px 12px; border-radius:8px; text-decoration:none; font-size:13px; cursor:pointer; }
+  main { max-width:1100px; margin:0 auto; padding:24px; display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media (max-width:820px){ main{ grid-template-columns:1fr; } }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; }
+  .panel h2 { font-size:14px; margin:0 0 14px; color:var(--gold); text-transform:uppercase; letter-spacing:1px; }
+  .btn { background:var(--gold); color:#1a1410; border:0; padding:9px 14px; border-radius:8px;
+         font-weight:700; cursor:pointer; font-size:13px; }
+  .btn.sm { padding:5px 9px; font-size:12px; }
+  .btn.danger { background:transparent; color:var(--red); border:1px solid var(--red); }
+  input, select { background:#120f13; border:1px solid var(--line); color:var(--text);
+         padding:9px 11px; border-radius:8px; font-size:14px; width:100%; }
+  .row { display:flex; gap:8px; align-items:center; }
+  .list { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+  .item { background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+          display:flex; align-items:center; gap:10px; }
+  .item .title { flex:1; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .item .meta { color:var(--muted); font-size:12px; }
+  .screen { cursor:pointer; }
+  .screen.active { border-color:var(--gold); }
+  .dot { width:9px; height:9px; border-radius:50%; flex:none; }
+  .dot.on { background:var(--green); box-shadow:0 0 8px var(--green); }
+  .dot.off { background:var(--red); }
+  .dot.idle { background:#7a7; opacity:.4; }
+  .muted { color:var(--muted); font-size:12px; }
+  .up { margin-top:16px; padding-top:16px; border-top:1px dashed var(--line); }
+  progress { width:100%; height:8px; }
+  .pill { font-size:11px; padding:2px 8px; border-radius:20px; border:1px solid var(--line); color:var(--muted); }
+  .empty { color:var(--muted); font-size:13px; padding:10px 0; }
+  dialog { background:var(--card); color:var(--text); border:1px solid var(--line); border-radius:14px;
+           padding:20px; width:min(520px,94vw); }
+  dialog::backdrop { background:rgba(0,0,0,.6); }
+  .chk { display:flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid var(--line);
+         border-radius:8px; background:var(--card2); }
+  .chk input { width:auto; }
+  .ord { display:flex; flex-direction:column; gap:2px; }
+  .ord button { background:transparent; border:1px solid var(--line); color:var(--muted); border-radius:5px;
+                width:24px; height:18px; line-height:1; cursor:pointer; font-size:11px; }
+  code { background:#120f13; padding:2px 6px; border-radius:5px; font-size:12px; color:var(--gold); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Botica Beladona · TV</h1>
+  <div class="right">
+    <span class="muted" id="clock"></span>
+    <button class="ghost" onclick="logout()">Sair</button>
+  </div>
+</header>
+
+<main>
+  <!-- TELAS -->
+  <section class="panel">
+    <h2>Telas / Unidades</h2>
+    <div class="row">
+      <input id="scCode" placeholder="Código (ex.: CENTRO-01)" style="text-transform:uppercase" />
+      <input id="scName" placeholder="Nome (ex.: Loja Centro)" />
+      <button class="btn" onclick="addScreen()">+ Tela</button>
+    </div>
+    <div class="list" id="screens"></div>
+    <div class="up muted">
+      Cada Fire Stick usa o <b>código</b> da tela na primeira abertura. Link do player:
+      <code id="playerUrlHint">/player</code>
+    </div>
+  </section>
+
+  <!-- VIDEOS -->
+  <section class="panel">
+    <h2>Biblioteca de vídeos</h2>
+    <div class="row">
+      <input id="vTitle" placeholder="Título do vídeo (opcional)" />
+    </div>
+    <div class="row" style="margin-top:8px">
+      <input id="vFile" type="file" accept="video/mp4,video/webm" />
+      <button class="btn" id="upBtn" onclick="uploadVideo()">Enviar</button>
+    </div>
+    <progress id="upProg" value="0" max="100" style="display:none"></progress>
+    <div class="muted" id="upMsg"></div>
+    <div class="list" id="videos"></div>
+  </section>
+</main>
+
+<!-- Editor de playlist da tela -->
+<dialog id="dlg">
+  <h2 id="dlgTitle" style="color:var(--gold);margin-top:0">Playlist da tela</h2>
+  <div class="muted" id="dlgStatus" style="margin-bottom:12px"></div>
+  <div id="dlgList" class="list"></div>
+  <div class="row" style="margin-top:18px;justify-content:space-between">
+    <button class="btn danger sm" onclick="removeScreen()">Excluir tela</button>
+    <div class="row" style="justify-content:flex-end">
+      <button class="ghost" onclick="dlg.close()">Fechar</button>
+      <button class="btn" onclick="savePlaylist()">Salvar playlist</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+let VIDEOS = [], SCREENS = [], editing = null;
+const dlg = document.getElementById("dlg");
+
+function fmtSize(b){ if(!b) return "—"; const mb=b/1048576; return mb<1000?mb.toFixed(1)+" MB":(mb/1024).toFixed(2)+" GB"; }
+function fmtDur(s){ if(!s) return ""; const m=Math.floor(s/60), ss=Math.round(s%60); return ` · ${m}:${String(ss).padStart(2,"0")}`; }
+function ago(iso){ if(!iso) return "nunca visto"; const d=(Date.now()-new Date(iso))/1000;
+  if(d<90) return "agora mesmo"; if(d<3600) return Math.round(d/60)+" min atrás";
+  if(d<86400) return Math.round(d/3600)+"h atrás"; return Math.round(d/86400)+"d atrás"; }
+function online(iso){ if(!iso) return false; return (Date.now()-new Date(iso)) < 10*60*1000; }
+
+async function api(path, opts){ const r=await fetch(path,opts); if(r.status===401){location.href="/login.html";return null;}
+  return r.json(); }
+
+async function load(){
+  const [v,s] = await Promise.all([api("/api/videos"), api("/api/screens")]);
+  if(!v||!s) return;
+  VIDEOS=v.videos; SCREENS=s.screens; renderVideos(); renderScreens();
+}
+
+function renderVideos(){
+  const el=document.getElementById("videos");
+  if(!VIDEOS.length){ el.innerHTML='<div class="empty">Nenhum vídeo enviado ainda.</div>'; return; }
+  el.innerHTML="";
+  VIDEOS.forEach(v=>{
+    const d=document.createElement("div"); d.className="item";
+    d.innerHTML=`<div class="title">${esc(v.title)}</div>
+      <span class="meta">${fmtSize(v.size)}${fmtDur(v.duration)}</span>
+      <button class="btn danger sm" data-id="${v.id}">excluir</button>`;
+    d.querySelector("button").onclick=()=>delVideo(v.id);
+    el.appendChild(d);
+  });
+}
+
+function renderScreens(){
+  const el=document.getElementById("screens");
+  if(!SCREENS.length){ el.innerHTML='<div class="empty">Nenhuma tela cadastrada.</div>'; return; }
+  el.innerHTML="";
+  SCREENS.forEach(s=>{
+    const on=online(s.lastSeen);
+    const np = s.nowPlaying ? (VIDEOS.find(v=>v.id===s.nowPlaying)?.title || "…") : "—";
+    const d=document.createElement("div"); d.className="item screen";
+    d.innerHTML=`<span class="dot ${s.lastSeen?(on?'on':'off'):'idle'}"></span>
+      <div class="title">${esc(s.name)} <span class="muted">(${s.code})</span><br>
+        <span class="muted">${(s.playlist||[]).length} vídeo(s) · ${ago(s.lastSeen)}${on?' · tocando: '+esc(np):''}</span></div>
+      <span class="pill">editar ›</span>`;
+    d.onclick=()=>openScreen(s.code);
+    el.appendChild(d);
+  });
+}
+
+function esc(t){ return String(t||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+// ---- Telas ----
+async function addScreen(){
+  const code=document.getElementById("scCode").value.trim();
+  const name=document.getElementById("scName").value.trim();
+  if(!code) return alert("Informe o código.");
+  const r=await api("/api/screens",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({code,name})});
+  if(r&&r.error) return alert(r.error);
+  document.getElementById("scCode").value=""; document.getElementById("scName").value="";
+  load();
+}
+
+function openScreen(code){
+  editing=SCREENS.find(s=>s.code===code); if(!editing) return;
+  document.getElementById("dlgTitle").textContent=editing.name+" ("+editing.code+")";
+  const on=online(editing.lastSeen);
+  const full = location.origin+"/player";
+  document.getElementById("dlgStatus").innerHTML=
+    `Status: ${editing.lastSeen?(on?'🟢 online':'🔴 offline'):'⚪ nunca conectou'} · ${ago(editing.lastSeen)}`+
+    (editing.storageFreeMb?` · ${editing.storageFreeMb} MB livres na TV`:"")+
+    `<br>No Fire Stick, abra <code>${full}</code> e digite o código <code>${editing.code}</code>.`;
+  // ordena: itens da playlist primeiro (na ordem), depois os demais
+  const inList = editing.playlist||[];
+  const ordered = [...inList.map(id=>VIDEOS.find(v=>v.id===id)).filter(Boolean),
+                   ...VIDEOS.filter(v=>!inList.includes(v.id))];
+  const list=document.getElementById("dlgList"); list.innerHTML="";
+  ordered.forEach(v=>{
+    const checked=inList.includes(v.id);
+    const row=document.createElement("label"); row.className="chk"; row.dataset.id=v.id;
+    row.innerHTML=`<input type="checkbox" ${checked?"checked":""}>
+      <span class="title" style="flex:1">${esc(v.title)}</span>
+      <span class="ord"><button type="button" onclick="move(this,-1)">▲</button>
+      <button type="button" onclick="move(this,1)">▼</button></span>`;
+    list.appendChild(row);
+  });
+  dlg.showModal();
+}
+
+function move(btn,dir){
+  const row=btn.closest(".chk"); const list=row.parentNode;
+  if(dir<0 && row.previousElementSibling) list.insertBefore(row,row.previousElementSibling);
+  if(dir>0 && row.nextElementSibling) list.insertBefore(row.nextElementSibling,row);
+}
+
+async function savePlaylist(){
+  const ids=[...document.querySelectorAll("#dlgList .chk")]
+    .filter(r=>r.querySelector("input").checked).map(r=>r.dataset.id);
+  const r=await api("/api/screens/"+editing.code,{method:"PUT",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({playlist:ids})});
+  if(r&&r.error) return alert(r.error);
+  dlg.close(); load();
+}
+
+async function removeScreen(){
+  if(!confirm("Excluir a tela "+editing.code+"?")) return;
+  await api("/api/screens/"+editing.code,{method:"DELETE"});
+  dlg.close(); load();
+}
+
+// ---- Videos ----
+function uploadVideo(){
+  const f=document.getElementById("vFile").files[0];
+  if(!f) return alert("Escolha um arquivo de vídeo.");
+  const title=document.getElementById("vTitle").value.trim();
+  const fd=new FormData(); fd.append("video",f); if(title) fd.append("title",title);
+
+  // pega a duração via <video> antes de enviar
+  const vurl=URL.createObjectURL(f); const probe=document.createElement("video");
+  probe.preload="metadata"; probe.src=vurl;
+  probe.onloadedmetadata=()=>{ fd.set("duration", Math.round(probe.duration||0)); URL.revokeObjectURL(vurl); doUpload(fd); };
+  probe.onerror=()=>{ doUpload(fd); };
+}
+
+function doUpload(fd){
+  const prog=document.getElementById("upProg"), msg=document.getElementById("upMsg"), btn=document.getElementById("upBtn");
+  prog.style.display="block"; prog.value=0; msg.textContent="Enviando…"; btn.disabled=true;
+  const xhr=new XMLHttpRequest(); xhr.open("POST","/api/videos");
+  xhr.upload.onprogress=e=>{ if(e.lengthComputable) prog.value=Math.round(e.loaded/e.total*100); };
+  xhr.onload=()=>{ btn.disabled=false; prog.style.display="none";
+    if(xhr.status===200){ msg.textContent="✓ Enviado."; document.getElementById("vFile").value="";
+      document.getElementById("vTitle").value=""; load(); setTimeout(()=>msg.textContent="",3000); }
+    else { try{msg.textContent="Erro: "+JSON.parse(xhr.responseText).error;}catch{msg.textContent="Erro no envio.";} } };
+  xhr.onerror=()=>{ btn.disabled=false; prog.style.display="none"; msg.textContent="Falha de conexão."; };
+  xhr.send(fd);
+}
+
+async function delVideo(id){
+  if(!confirm("Excluir este vídeo? Ele sai de todas as telas.")) return;
+  await api("/api/videos/"+id,{method:"DELETE"}); load();
+}
+
+async function logout(){ await fetch("/api/logout",{method:"POST"}); location.href="/login.html"; }
+
+setInterval(()=>{ document.getElementById("clock").textContent=new Date().toLocaleTimeString("pt-BR"); },1000);
+document.getElementById("playerUrlHint").textContent = location.origin + "/player";
+load();
+setInterval(load, 30000); // atualiza status das telas
+</script>
+</body>
+</html>

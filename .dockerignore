@@ -1,0 +1,8 @@
+node_modules
+data
+android
+.git
+.claude
+npm-debug.log
+# obs: NAO ignore *.apk aqui — public/downloads/beladonatv.apk precisa ir para a imagem
+# (a pasta android/ inteira ja esta ignorada, entao os APKs de build nao entram)
