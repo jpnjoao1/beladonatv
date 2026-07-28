@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "test": "bash scripts/smoke-test.sh"
   },
   "engines": {
     "node": ">=20"

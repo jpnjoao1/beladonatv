@@ -152,6 +152,12 @@ app.get(["/player", "/player.html"], (req, res) => {
   res.sendFile(path.join(__dirname, "public", "player.html"));
 });
 
+// Pagina de teste/diagnostico (publica) — abra SEU-SERVIDOR/test no navegador.
+// Verifica servidor, player, playlist, heartbeat e APK; simula uma TV tocando a playlist.
+app.get(["/test", "/test.html"], (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "test.html"));
+});
+
 // Pagina de login (publica).
 app.get("/login.html", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));

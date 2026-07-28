@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Teste — TV Beladona</title>
+<style>
+  :root{
+    --bg:#0f1216; --card:#171b21; --line:#262c35; --fg:#e8ecf1; --mut:#93a0b0;
+    --ok:#22c55e; --bad:#ef4444; --wait:#eab308; --accent:#3b82f6;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f4f6f9; --card:#fff; --line:#e2e7ee; --fg:#1a2029; --mut:#5b6675; }
+  }
+  *{ box-sizing:border-box }
+  body{ margin:0; background:var(--bg); color:var(--fg);
+    font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  .wrap{ max-width:820px; margin:0 auto; padding:20px 16px 60px }
+  h1{ font-size:22px; margin:0 0 4px }
+  .sub{ color:var(--mut); margin:0 0 20px; font-size:14px }
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:18px; margin:0 0 16px }
+  .card h2{ font-size:15px; margin:0 0 12px; letter-spacing:.02em; text-transform:uppercase; color:var(--mut) }
+  label{ display:block; font-size:13px; color:var(--mut); margin:0 0 5px }
+  input{ width:100%; padding:10px 12px; background:var(--bg); color:var(--fg);
+    border:1px solid var(--line); border-radius:9px; font-size:15px }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:end }
+  .row > div{ flex:1; min-width:160px }
+  button{ padding:10px 16px; border:0; border-radius:9px; background:var(--accent);
+    color:#fff; font-size:14px; font-weight:600; cursor:pointer; white-space:nowrap }
+  button.ghost{ background:transparent; border:1px solid var(--line); color:var(--fg) }
+  button:disabled{ opacity:.5; cursor:default }
+  .check{ display:flex; align-items:center; gap:10px; padding:9px 0; border-top:1px solid var(--line) }
+  .check:first-of-type{ border-top:0 }
+  .dot{ width:11px; height:11px; border-radius:50%; background:var(--line); flex:none }
+  .dot.ok{ background:var(--ok) } .dot.bad{ background:var(--bad) } .dot.wait{ background:var(--wait) }
+  .check .name{ flex:1 } .check .msg{ color:var(--mut); font-size:13px; text-align:right }
+  .links{ display:flex; gap:10px; flex-wrap:wrap; margin-top:4px }
+  .links a{ text-decoration:none }
+  video{ width:100%; border-radius:10px; background:#000; margin-top:12px; display:none }
+  .list{ margin:12px 0 0; font-size:14px }
+  .list .it{ display:flex; justify-content:space-between; gap:10px; padding:7px 0; border-top:1px solid var(--line) }
+  .list .it:first-child{ border-top:0 }
+  .muted{ color:var(--mut) } .mono{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px }
+  .pill{ font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--mut) }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🧪 Teste — TV Beladona</h1>
+  <p class="sub">Diagnóstico do servidor + simulador de TV. Servido pelo próprio servidor, então testa tudo (painel, player, playlist, heartbeat, APK).</p>
+
+  <div class="card">
+    <h2>Servidor</h2>
+    <div class="row">
+      <div>
+        <label>URL do servidor</label>
+        <input id="base" />
+      </div>
+      <button id="run">Rodar diagnóstico</button>
+    </div>
+    <div id="checks" style="margin-top:14px"></div>
+    <div class="links" style="margin-top:14px">
+      <a href="#" id="lk-panel"><button class="ghost">Abrir painel</button></a>
+      <a href="#" id="lk-player"><button class="ghost">Abrir player</button></a>
+      <a href="#" id="lk-apk"><button class="ghost">Baixar APK</button></a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Simulador de TV</h2>
+    <p class="sub" style="margin:-4px 0 12px">Digite o código de uma tela cadastrada no painel (ex.: <span class="mono">CENTRO-01</span>). Busca a playlist, envia um heartbeat e toca os vídeos aqui no navegador — sem precisar do Fire TV.</p>
+    <div class="row">
+      <div>
+        <label>Código da tela</label>
+        <input id="device" placeholder="CENTRO-01" />
+      </div>
+      <button id="simular">Testar tela</button>
+      <button id="parar" class="ghost" style="display:none">Parar</button>
+    </div>
+    <div id="simInfo" class="list"></div>
+    <video id="vid" controls playsinline></video>
+  </div>
+
+  <div class="card">
+    <h2>Login do painel (opcional)</h2>
+    <p class="sub" style="margin:-4px 0 12px">Só funciona se esta página estiver na mesma URL do servidor. Verifica a senha e lista as telas cadastradas.</p>
+    <div class="row">
+      <div>
+        <label>Senha do painel</label>
+        <input id="pass" type="password" placeholder="beladona" />
+      </div>
+      <button id="login">Entrar e listar telas</button>
+    </div>
+    <div id="loginOut" class="list"></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const clean = (u) => (u || "").trim().replace(/\/+$/, "");
+// Se a página foi servida pelo servidor, usa a própria origem. Senão, deixa em branco pra digitar.
+$("base").value = location.protocol.startsWith("http") ? location.origin : "";
+
+function syncLinks(){
+  const b = clean($("base").value);
+  $("lk-panel").href = b + "/";
+  $("lk-player").href = b + "/player";
+  $("lk-apk").href = b + "/tv.apk";
+}
+$("base").addEventListener("input", syncLinks);
+syncLinks();
+
+function checkRow(id, name){
+  let el = $("chk-" + id);
+  if (!el){
+    el = document.createElement("div");
+    el.className = "check";
+    el.id = "chk-" + id;
+    el.innerHTML = `<span class="dot wait"></span><span class="name"></span><span class="msg"></span>`;
+    $("checks").appendChild(el);
+  }
+  el.querySelector(".name").textContent = name;
+  return {
+    set(state, msg){
+      el.querySelector(".dot").className = "dot " + state;
+      el.querySelector(".msg").textContent = msg || "";
+    }
+  };
+}
+
+async function ping(url, opts){
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 12000);
+  try { return await fetch(url, Object.assign({ signal: ctrl.signal }, opts || {})); }
+  finally { clearTimeout(t); }
+}
+
+$("run").onclick = async () => {
+  const b = clean($("base").value);
+  if (!b) return alert("Informe a URL do servidor.");
+  $("checks").innerHTML = "";
+  syncLinks();
+
+  const cLogin = checkRow("login", "Página de login (/login.html)");
+  const cPlayer = checkRow("player", "Player (/player)");
+  const cApi = checkRow("api", "API de playlist (/api/playlist)");
+  const cApk = checkRow("apk", "APK disponível (/tv.apk)");
+
+  try { const r = await ping(b + "/login.html"); cLogin.set(r.ok ? "ok" : "bad", "HTTP " + r.status); }
+  catch(e){ cLogin.set("bad", "sem resposta — servidor no ar?"); }
+
+  try { const r = await ping(b + "/player"); cPlayer.set(r.ok ? "ok" : "bad", "HTTP " + r.status); }
+  catch(e){ cPlayer.set("bad", "sem resposta"); }
+
+  try {
+    const r = await ping(b + "/api/playlist?device=__diag__");
+    // 404 = tela não existe, mas a API respondeu (bom sinal). 200 = existe.
+    cApi.set(r.status === 200 || r.status === 404 ? "ok" : "bad", "HTTP " + r.status + (r.status===404 ? " (API viva)" : ""));
+  } catch(e){ cApi.set("bad", "sem resposta"); }
+
+  try {
+    const r = await ping(b + "/tv.apk", { method: "HEAD" });
+    cApk.set(r.ok ? "ok" : "wait", r.ok ? "disponível" : "ainda não publicado (HTTP " + r.status + ")");
+  } catch(e){ cApk.set("wait", "não publicado"); }
+};
+
+// ---- Simulador de TV ----
+let queue = [], idx = 0;
+const vid = $("vid");
+
+async function loadPlaylist(){
+  const b = clean($("base").value);
+  const code = $("device").value.trim().toUpperCase();
+  if (!b || !code) return alert("Informe a URL do servidor e o código da tela.");
+  $("simInfo").innerHTML = '<div class="muted">Buscando playlist…</div>';
+  let data;
+  try {
+    const r = await ping(b + "/api/playlist?device=" + encodeURIComponent(code));
+    if (r.status === 404){ $("simInfo").innerHTML = '<div class="muted">Tela <b>'+code+'</b> não cadastrada no painel.</div>'; return; }
+    if (!r.ok){ $("simInfo").innerHTML = '<div class="muted">Erro HTTP '+r.status+'.</div>'; return; }
+    data = await r.json();
+  } catch(e){ $("simInfo").innerHTML = '<div class="muted">Sem resposta do servidor.</div>'; return; }
+
+  // Heartbeat de teste, como uma TV faria.
+  ping(b + "/api/heartbeat", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ device: code, nowPlaying: "(teste via /test)", appVersion: 0, storageFreeMb: 9999, itemsCached: (data.items||[]).length })
+  }).catch(()=>{});
+
+  const items = data.items || [];
+  let html = '<div class="it"><span><b>'+(data.name||code)+'</b> <span class="pill">'+items.length+' vídeo(s)</span></span>'
+           + '<span class="muted">heartbeat enviado ✓</span></div>';
+  if (!items.length){
+    html += '<div class="it muted">Playlist vazia — cadastre vídeos para esta tela no painel.</div>';
+  } else {
+    items.forEach((it,i) => {
+      html += '<div class="it"><span>'+(i+1)+'. '+ (it.title||it.file) +'</span>'
+            + '<span class="muted mono">'+ ((it.size/1048576)||0).toFixed(1) +' MB</span></div>';
+    });
+  }
+  $("simInfo").innerHTML = html;
+
+  if (items.length){
+    queue = items.map(it => (b + (it.url || ("/media/" + it.file))));
+    idx = 0;
+    vid.style.display = "block";
+    $("parar").style.display = "inline-block";
+    playCurrent();
+  }
+}
+function playCurrent(){ if(!queue.length) return; vid.src = queue[idx]; vid.play().catch(()=>{}); }
+vid.addEventListener("ended", () => { idx = (idx + 1) % queue.length; playCurrent(); });
+
+$("simular").onclick = loadPlaylist;
+$("parar").onclick = () => { vid.pause(); vid.removeAttribute("src"); vid.load(); vid.style.display="none"; $("parar").style.display="none"; queue=[]; };
+
+// ---- Login (mesma origem) ----
+$("login").onclick = async () => {
+  const b = clean($("base").value);
+  const out = $("loginOut");
+  out.innerHTML = '<div class="muted">Entrando…</div>';
+  try {
+    const r = await fetch(b + "/api/login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      credentials: "include", body: JSON.stringify({ password: $("pass").value })
+    });
+    if (!r.ok){ out.innerHTML = '<div class="muted">Senha incorreta (HTTP '+r.status+').</div>'; return; }
+    const s = await fetch(b + "/api/screens", { credentials: "include" });
+    if (!s.ok){ out.innerHTML = '<div class="muted">Login ok, mas não consegui listar telas (HTTP '+s.status+'). Abra esta página pela mesma URL do servidor.</div>'; return; }
+    const data = await s.json();
+    const screens = data.screens || [];
+    let html = '<div class="it"><span>Login ✓</span><span class="pill">'+screens.length+' tela(s)</span></div>';
+    screens.forEach(sc => {
+      const on = sc.lastSeen ? (new Date(sc.lastSeen).toLocaleString("pt-BR")) : "nunca vista";
+      html += '<div class="it"><span class="mono">'+sc.code+'</span><span class="muted">'+on+'</span></div>';
+    });
+    out.innerHTML = html;
+  } catch(e){
+    out.innerHTML = '<div class="muted">Falha de rede/CORS. O login só funciona se esta página estiver na MESMA URL do servidor.</div>';
+  }
+};
+</script>
+</body>
+</html>

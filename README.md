@@ -37,6 +37,18 @@ Abra <http://localhost:3000> (senha padrão `beladona` se não definir `PANEL_PA
 Para testar o player no navegador: <http://localhost:3000/player> (teclado simula o controle:
 letras/números digitam o código, **Enter** confirma, **Backspace** apaga, **-** hífen, **←/→** troca de vídeo).
 
+### Página de teste / diagnóstico
+
+Abra <http://localhost:3000/test> (ou `SUA-URL/test` em produção). A página faz o diagnóstico
+do servidor (painel, player, playlist, heartbeat, APK) e traz um **simulador de TV**: digite o
+código de uma tela e ela busca a playlist, envia um heartbeat e toca os vídeos no navegador —
+sem precisar do Fire TV. Para um teste rápido pelo terminal, rode `npm test` (aponta para outro
+servidor com `BASE=https://sua.url npm test`).
+
+> **Terminal online (sem instalar nada):** abra o repositório no **GitHub Codespaces**
+> (`Code ▸ Codespaces ▸ Create codespace`). O `.devcontainer` instala tudo, sobe o servidor e
+> encaminha a porta 3000 com uma **URL pública** — acesse `.../test` nela.
+
 ## 2. Publicar no Fly.io
 
 ```bash
